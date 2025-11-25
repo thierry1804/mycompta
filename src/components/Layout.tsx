@@ -4,8 +4,10 @@ import { Link, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
     Receipt,
+    Wallet,
     FileText,
     Settings,
+    HelpCircle,
     Menu,
     X,
     Sun,
@@ -35,6 +37,11 @@ const navItems: NavItem[] = [
         icon: <Receipt className="w-5 h-5" />,
     },
     {
+        name: 'Trésorerie',
+        path: '/tresorerie',
+        icon: <Wallet className="w-5 h-5" />,
+    },
+    {
         name: 'États Financiers',
         path: '/etats-financiers',
         icon: <FileText className="w-5 h-5" />,
@@ -43,6 +50,11 @@ const navItems: NavItem[] = [
         name: 'Paramètres',
         path: '/parametres',
         icon: <Settings className="w-5 h-5" />,
+    },
+    {
+        name: 'Aide',
+        path: '/aide',
+        icon: <HelpCircle className="w-5 h-5" />,
     },
 ];
 

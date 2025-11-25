@@ -5,8 +5,10 @@ import { AppProvider, useApp } from './contexts/AppContext';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Transactions } from './pages/Transactions';
+import { Tresorerie } from './pages/Tresorerie';
 import { EtatsFinanciers } from './pages/EtatsFinanciers';
 import { Parametres } from './pages/Parametres';
+import { Aide } from './pages/Aide';
 import { Onboarding } from './pages/Onboarding';
 
 function AppRoutes() {
@@ -37,8 +39,10 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/transactions" element={<Transactions />} />
+        <Route path="/tresorerie" element={<Tresorerie />} />
         <Route path="/etats-financiers" element={<EtatsFinanciers />} />
         <Route path="/parametres" element={<Parametres />} />
+        <Route path="/aide" element={<Aide />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
