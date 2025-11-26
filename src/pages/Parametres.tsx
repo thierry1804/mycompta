@@ -4,7 +4,6 @@ import { Building2, Calendar, Tag, Save } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Select } from '../components/ui';
 import { useApp } from '../contexts/AppContext';
 import type { EntrepriseInfo, Exercice } from '../types';
-import { getCurrentDateISO } from '../utils/date';
 import { formatDate } from '../utils/date';
 
 export function Parametres() {

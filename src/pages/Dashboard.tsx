@@ -4,8 +4,8 @@ import { TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui';
 import { useTransactions } from '../hooks/useTransactions';
 import { formatMontant } from '../utils/currency';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { startOfMonth, endOfMonth, format, eachMonthOfInterval, startOfYear } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { startOfMonth, endOfMonth, format, eachMonthOfInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
@@ -14,8 +14,6 @@ export function Dashboard() {
     const {
         transactions,
         isLoading,
-        getTotalRecettes,
-        getTotalDepenses,
         getSoldeCaisse,
         getSoldeBanque,
     } = useTransactions();
@@ -216,12 +214,12 @@ export function Dashboard() {
                                         cx="50%"
                                         cy="50%"
                                         labelLine={false}
-                                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                        label={({ name, percent }: { name?: string; percent?: number }) => name ? `${name}: ${((percent || 0) * 100).toFixed(0)}%` : ''}
                                         outerRadius={80}
                                         fill="#8884d8"
                                         dataKey="value"
                                     >
-                                        {depensesByCategory.map((entry, index) => (
+                                        {depensesByCategory.map((_, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>

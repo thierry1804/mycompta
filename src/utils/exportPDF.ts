@@ -47,12 +47,12 @@ export function exportTransactionsToPDF(transactions: Transaction[], entreprise:
     doc.setFontSize(11);
     doc.text(`Total Recettes: ${formatMontant(totalRecettes)}`, 14, finalY);
     doc.text(`Total Dépenses: ${formatMontant(totalDepenses)}`, 14, finalY + 7);
-    doc.setFont(undefined, 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text(`Solde: ${formatMontant(totalRecettes - totalDepenses)}`, 14, finalY + 14);
 
     // Pied de page
     doc.setFontSize(8);
-    doc.setFont(undefined, 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text('Conforme au PCG 2005 - Madagascar', 14, doc.internal.pageSize.height - 10);
 
     doc.save(`transactions_${exercice}.pdf`);
@@ -72,7 +72,7 @@ export function exportBilanToPDF(bilan: any, entreprise: string, exercice: strin
 
     // ACTIF
     doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('ACTIF', 14, 52);
 
     autoTable(doc, {
@@ -94,7 +94,7 @@ export function exportBilanToPDF(bilan: any, entreprise: string, exercice: strin
     // PASSIF
     const passifY = (doc as any).lastAutoTable.finalY + 10;
     doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('PASSIF', 14, passifY);
 
     autoTable(doc, {
@@ -113,7 +113,7 @@ export function exportBilanToPDF(bilan: any, entreprise: string, exercice: strin
 
     // Pied de page
     doc.setFontSize(8);
-    doc.setFont(undefined, 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text('Conforme au Plan Comptable Général (PCG) 2005 - Madagascar', 14, doc.internal.pageSize.height - 10);
 
     doc.save(`bilan_${exercice}.pdf`);
@@ -133,7 +133,7 @@ export function exportCompteResultatToPDF(compteResultat: any, entreprise: strin
 
     // PRODUITS
     doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(16, 185, 129); // Green
     doc.text('PRODUITS', 14, 52);
     doc.setTextColor(0, 0, 0);
@@ -155,7 +155,7 @@ export function exportCompteResultatToPDF(compteResultat: any, entreprise: strin
     // CHARGES
     const chargesY = (doc as any).lastAutoTable.finalY + 10;
     doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(239, 68, 68); // Red
     doc.text('CHARGES', 14, chargesY);
     doc.setTextColor(0, 0, 0);
@@ -179,7 +179,7 @@ export function exportCompteResultatToPDF(compteResultat: any, entreprise: strin
     // RÉSULTAT
     const resultatY = (doc as any).lastAutoTable.finalY + 10;
     doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
+    doc.setFont('helvetica', 'bold');
     const resultatText = compteResultat.resultat >= 0 ? 'BÉNÉFICE' : 'PERTE';
     const resultatColor = compteResultat.resultat >= 0 ? [16, 185, 129] : [239, 68, 68];
     doc.setTextColor(resultatColor[0], resultatColor[1], resultatColor[2]);
@@ -187,7 +187,7 @@ export function exportCompteResultatToPDF(compteResultat: any, entreprise: strin
 
     // Pied de page
     doc.setFontSize(8);
-    doc.setFont(undefined, 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
     doc.text('Conforme au Plan Comptable Général (PCG) 2005 - Madagascar', 14, doc.internal.pageSize.height - 10);
 

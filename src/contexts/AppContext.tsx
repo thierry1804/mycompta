@@ -1,6 +1,6 @@
 // Contexte pour la gestion de l'application
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { EntrepriseInfo, Exercice, AppSettings } from '../types';
+import type { EntrepriseInfo, Exercice } from '../types';
 import { firestoreService } from '../services/firestore';
 
 interface AppContextType {
