@@ -107,46 +107,38 @@ export interface CategorieDepense {
 
 // États financiers
 export interface BilanSimplified {
+    exerciceId: string;
+    dateEtablissement: string;
     actif: {
-        caisse: number;
-        banque: number;
         immobilisations: number;
         stocks: number;
         creances: number;
-        totalActif: number;
+        tresorerie: number;
+        total: number;
     };
     passif: {
-        capital: number;
-        resultat: number;
-        emprunts: number;
+        capitaux: number;
         dettes: number;
-        totalPassif: number;
+        total: number;
     };
 }
 
 export interface CompteResultat {
-    recettes: {
-        venteProduits: number;
-        prestationsServices: number;
-        autresRecettes: number;
-        totalRecettes: number;
+    exerciceId: string;
+    dateEtablissement: string;
+    produits: {
+        ventesProduitsServices: number;
+        autresProduits: number;
+        total: number;
     };
-    depenses: {
-        achatsConsommes: number;
-        chargesExternes: number;
+    charges: {
+        achats: number;
         chargesPersonnel: number;
-        impotsTaxes: number;
         autresCharges: number;
-        totalDepenses: number;
-    };
-    solde: number;
-    corrections: {
-        variationStocks: number;
-        variationCreancesDettes: number;
         amortissements: number;
-        autresCorrections: number;
+        total: number;
     };
-    resultatExercice: number;
+    resultat: number;
 }
 
 // Theme
