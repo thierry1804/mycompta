@@ -1,5 +1,5 @@
 // Layout principal avec Sidebar
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -63,6 +63,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
     const { entrepriseInfo, exerciceCourant } = useApp();
+
+    // Empêcher le scroll du body quand le menu est ouvert
+    useEffect(() => {
+        if (sidebarOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [sidebarOpen]);
 
     return (
         <div className="min-h-screen bg-background">
@@ -132,24 +144,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             {/* Sidebar Mobile */}
             {sidebarOpen && (
-                <div className="md:hidden">
-                    <div className="fixed inset-0 z-40 flex">
-                        <div
-                            className="fixed inset-0 bg-black/50"
-                            onClick={() => setSidebarOpen(false)}
-                        />
-                        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-card">
-                            <div className="absolute top-0 right-0 -mr-12 pt-2">
-                                <button
-                                    className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-                                    onClick={() => setSidebarOpen(false)}
-                                >
-                                    <X className="h-6 w-6 text-white" />
-                                </button>
-                            </div>
-
-                            <div className="flex items-center flex-shrink-0 px-4 py-6 border-b border-border">
-                                <Building2 className="w-8 h-8 text-primary mr-3" />
+                <div className="md:hidden fixed inset-0 z-50 flex">
+                    <div 
+                        className="fixed inset-0 bg-black/80 dark:bg-black/90 backdrop-blur-md transition-opacity duration-300" 
+                        onClick={() => setSidebarOpen(false)}
+                        aria-hidden="true"
+                    />
+                    <div className="relative flex flex-col w-full max-w-xs h-full bg-white dark:bg-gray-800 shadow-2xl border-r-2 border-gray-200 dark:border-gray-700 z-10">
+                        <div className="flex items-center justify-between px-4 py-6 border-b border-border">
+                            <div className="flex items-center flex-1 min-w-0">
+                                <Building2 className="w-8 h-8 text-primary mr-3 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
                                     <h1 className="text-lg font-bold text-foreground truncate">
                                         {entrepriseInfo?.nom || 'Compta MPE'}
@@ -161,49 +165,55 @@ export function Layout({ children }: { children: React.ReactNode }) {
                                     )}
                                 </div>
                             </div>
+                            <button
+                                className="ml-4 flex items-center justify-center h-10 w-10 rounded-full hover:bg-accent focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary"
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                <X className="h-6 w-6 text-foreground" />
+                            </button>
+                        </div>
 
-                            <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-                                {navItems.map((item) => {
-                                    const isActive = location.pathname === item.path;
-                                    return (
-                                        <Link
-                                            key={item.path}
-                                            to={item.path}
-                                            onClick={() => setSidebarOpen(false)}
-                                            className={cn(
-                                                'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors',
-                                                isActive
-                                                    ? 'bg-primary text-primary-foreground'
-                                                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                                            )}
-                                        >
-                                            {item.icon}
-                                            <span className="ml-3">{item.name}</span>
-                                        </Link>
-                                    );
-                                })}
-                            </nav>
+                        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+                            {navItems.map((item) => {
+                                const isActive = location.pathname === item.path;
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        onClick={() => setSidebarOpen(false)}
+                                        className={cn(
+                                            'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors',
+                                            isActive
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                        )}
+                                    >
+                                        {item.icon}
+                                        <span className="ml-3">{item.name}</span>
+                                    </Link>
+                                );
+                            })}
+                        </nav>
 
-                            <div className="flex-shrink-0 border-t border-border p-4">
-                                <Button
-                                    variant="outline"
-                                    size="default"
-                                    onClick={toggleTheme}
-                                    className="w-full"
-                                >
-                                    {theme === 'light' ? (
-                                        <>
-                                            <Moon className="w-4 h-4 mr-2" />
-                                            Mode sombre
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sun className="w-4 h-4 mr-2" />
-                                            Mode clair
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
+                        <div className="flex-shrink-0 border-t border-border p-4">
+                            <Button
+                                variant="outline"
+                                size="default"
+                                onClick={toggleTheme}
+                                className="w-full"
+                            >
+                                {theme === 'light' ? (
+                                    <>
+                                        <Moon className="w-4 h-4 mr-2" />
+                                        Mode sombre
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sun className="w-4 h-4 mr-2" />
+                                        Mode clair
+                                    </>
+                                )}
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -212,7 +222,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* Main Content */}
             <div className="md:pl-64 flex flex-col flex-1">
                 {/* Mobile Header */}
-                <div className="sticky top-0 z-10 md:hidden flex items-center justify-between bg-card border-b border-border px-4 py-3">
+                <div className="sticky top-0 z-40 md:hidden flex items-center justify-between bg-card/95 backdrop-blur-sm border-b border-border px-4 py-3 shadow-sm">
                     <button
                         className="text-muted-foreground hover:text-foreground"
                         onClick={() => setSidebarOpen(true)}

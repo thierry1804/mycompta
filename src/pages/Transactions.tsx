@@ -81,14 +81,14 @@ export function Transactions() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">Transactions</h2>
                     <p className="text-muted-foreground">
                         Gérez vos recettes et dépenses
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     {transactions.length > 0 && (
                         <Button
                             variant="outline"
@@ -96,7 +96,7 @@ export function Transactions() {
                             className="flex items-center gap-2"
                         >
                             <Download className="w-4 h-4" />
-                            Exporter CSV
+                            <span className="hidden sm:inline">Exporter </span>CSV
                         </Button>
                     )}
                     <Button

@@ -11,44 +11,52 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setTheme] = useState<Theme>('light');
-    const [mounted, setMounted] = useState(false);
+    // Initialiser avec la préférence système ou 'light' par défaut
+    const getInitialTheme = (): Theme => {
+        // Vérifier d'abord le localStorage de manière synchrone
+        const savedTheme = localStorage.getItem('theme') as Theme | null;
+        if (savedTheme === 'dark' || savedTheme === 'light') {
+            return savedTheme;
+        }
+        // Sinon, détecter la préférence système
+        if (typeof window !== 'undefined') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            return prefersDark ? 'dark' : 'light';
+        }
+        return 'light';
+    };
+
+    const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
     useEffect(() => {
-        // Charger le thème depuis le stockage
+        // Appliquer le thème immédiatement au chargement
+        const root = window.document.documentElement;
+        root.classList.remove('light', 'dark');
+        root.classList.add(theme);
+
+        // Charger le thème depuis le stockage asynchrone (pour la persistance)
         const loadTheme = async () => {
             const savedTheme = await storage.get<Theme>('theme');
-            if (savedTheme) {
+            if (savedTheme && savedTheme !== theme) {
                 setTheme(savedTheme);
-            } else {
-                // Détecter la préférence système
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                setTheme(prefersDark ? 'dark' : 'light');
             }
-            setMounted(true);
         };
         loadTheme();
     }, []);
 
     useEffect(() => {
-        if (!mounted) return;
-
-        // Appliquer le thème au document
+        // Appliquer le thème au document à chaque changement
         const root = window.document.documentElement;
         root.classList.remove('light', 'dark');
         root.classList.add(theme);
 
         // Sauvegarder le thème
         storage.set('theme', theme);
-    }, [theme, mounted]);
+    }, [theme]);
 
     const toggleTheme = () => {
         setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
     };
-
-    if (!mounted) {
-        return null;
-    }
 
     return (
         <ThemeContext.Provider value={{ theme, toggleTheme }}>
