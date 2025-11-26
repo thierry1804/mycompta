@@ -1,7 +1,7 @@
 // Contexte pour le thème (Dark/Light mode)
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Theme } from '../types';
-import { storage } from '../services/storage';
+import { firestoreService } from '../services/firestore';
 
 interface ThemeContextType {
     theme: Theme;
@@ -34,11 +34,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         root.classList.remove('light', 'dark');
         root.classList.add(theme);
 
-        // Charger le thème depuis le stockage asynchrone (pour la persistance)
+        // Charger le thème depuis Firestore (pour la persistance)
         const loadTheme = async () => {
-            const savedTheme = await storage.get<Theme>('theme');
-            if (savedTheme && savedTheme !== theme) {
-                setTheme(savedTheme);
+            const settings = await firestoreService.getSettings();
+            if (settings?.theme && settings.theme !== theme) {
+                setTheme(settings.theme);
             }
         };
         loadTheme();
@@ -50,8 +50,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         root.classList.remove('light', 'dark');
         root.classList.add(theme);
 
-        // Sauvegarder le thème
-        storage.set('theme', theme);
+        // Sauvegarder le thème dans Firestore
+        const saveTheme = async () => {
+            const settings = await firestoreService.getSettings() || {
+                theme: 'light',
+                exerciceCourantId: '',
+                firstLaunch: false,
+            };
+            settings.theme = theme;
+            await firestoreService.setSettings(settings);
+        };
+        saveTheme();
     }, [theme]);
 
     const toggleTheme = () => {

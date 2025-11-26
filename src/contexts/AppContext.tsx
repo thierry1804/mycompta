@@ -1,13 +1,16 @@
 // Contexte pour la gestion de l'application
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { EntrepriseInfo, Exercice, AppSettings } from '../types';
-import { storage } from '../services/storage';
+import { firestoreService } from '../services/firestore';
 
 interface AppContextType {
     entrepriseInfo: EntrepriseInfo | null;
     setEntrepriseInfo: (info: EntrepriseInfo) => Promise<void>;
     exercices: Exercice[];
     setExercices: (exercices: Exercice[]) => Promise<void>;
+    addExercice: (exercice: Exercice) => Promise<void>;
+    updateExercice: (exercice: Exercice) => Promise<void>;
+    deleteExercice: (exerciceId: string) => Promise<void>;
     exerciceCourant: Exercice | null;
     setExerciceCourant: (exercice: Exercice) => Promise<void>;
     firstLaunch: boolean;
@@ -25,17 +28,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Charger les données au démarrage
+        // Charger les données au démarrage depuis Firestore
         const loadData = async () => {
             try {
                 const [info, exs, settings] = await Promise.all([
-                    storage.get<EntrepriseInfo>('entreprise-info'),
-                    storage.get<Exercice[]>('exercices'),
-                    storage.get<AppSettings>('app-settings'),
+                    firestoreService.getEntrepriseInfo(),
+                    firestoreService.getExercices(),
+                    firestoreService.getSettings(),
                 ]);
 
                 if (info) setEntrepriseInfoState(info);
-                if (exs) {
+                if (exs && exs.length > 0) {
                     setExercicesState(exs);
                     // Trouver l'exercice courant
                     const currentId = settings?.exerciceCourantId;
@@ -55,34 +58,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const setEntrepriseInfo = async (info: EntrepriseInfo) => {
-        await storage.set('entreprise-info', info);
+        await firestoreService.setEntrepriseInfo(info);
         setEntrepriseInfoState(info);
     };
 
     const setExercices = async (exs: Exercice[]) => {
-        await storage.set('exercices', exs);
+        // Sauvegarder chaque exercice individuellement dans Firestore
+        // Mettre à jour les exercices existants et ajouter les nouveaux
+        await Promise.all(exs.map(ex => firestoreService.addExercice(ex)));
         setExercicesState(exs);
     };
 
+    const addExercice = async (exercice: Exercice) => {
+        await firestoreService.addExercice(exercice);
+        const updated = [...exercices, exercice];
+        setExercicesState(updated);
+    };
+
+    const updateExercice = async (exercice: Exercice) => {
+        await firestoreService.updateExercice(exercice);
+        const updated = exercices.map(ex => ex.id === exercice.id ? exercice : ex);
+        setExercicesState(updated);
+    };
+
+    const deleteExercice = async (exerciceId: string) => {
+        await firestoreService.deleteExercice(exerciceId);
+        const updated = exercices.filter(ex => ex.id !== exerciceId);
+        setExercicesState(updated);
+        // Si l'exercice supprimé était l'exercice courant, sélectionner le premier disponible
+        if (exerciceCourant?.id === exerciceId) {
+            const newCurrent = updated[0] || null;
+            if (newCurrent) {
+                await setExerciceCourant(newCurrent);
+            } else {
+                setExerciceCourantState(null);
+            }
+        }
+    };
+
     const setExerciceCourant = async (exercice: Exercice) => {
-        const settings = await storage.get<AppSettings>('app-settings') || {
+        const settings = await firestoreService.getSettings() || {
             theme: 'light',
             exerciceCourantId: exercice.id,
             firstLaunch: false,
         };
         settings.exerciceCourantId = exercice.id;
-        await storage.set('app-settings', settings);
+        await firestoreService.setSettings(settings);
         setExerciceCourantState(exercice);
     };
 
     const setFirstLaunch = async (value: boolean) => {
-        const settings = await storage.get<AppSettings>('app-settings') || {
+        const settings = await firestoreService.getSettings() || {
             theme: 'light',
             exerciceCourantId: exerciceCourant?.id || '',
             firstLaunch: value,
         };
         settings.firstLaunch = value;
-        await storage.set('app-settings', settings);
+        await firestoreService.setSettings(settings);
         setFirstLaunchState(value);
     };
 
@@ -93,6 +125,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 setEntrepriseInfo,
                 exercices,
                 setExercices,
+                addExercice,
+                updateExercice,
+                deleteExercice,
                 exerciceCourant,
                 setExerciceCourant,
                 firstLaunch,
