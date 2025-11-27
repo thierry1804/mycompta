@@ -11,11 +11,11 @@ export function useEtatsFinanciers() {
     // Calcul du Bilan Simplifié (Situation de Fin d'Exercice)
     const bilan = useMemo((): BilanSimplified => {
         const recettes = transactions
-            .filter((t) => t.type === 'recette')
+            .filter((t) => t.type === 'recette' && !t.estStorno)
             .reduce((sum, t) => sum + t.montant, 0);
 
         const depenses = transactions
-            .filter((t) => t.type === 'depense')
+            .filter((t) => t.type === 'depense' && !t.estStorno)
             .reduce((sum, t) => sum + t.montant, 0);
 
         const resultat = recettes - depenses;
@@ -51,20 +51,20 @@ export function useEtatsFinanciers() {
     // Calcul du Compte de Résultat Simplifié
     const compteResultat = useMemo((): CompteResultat => {
         const recettes = transactions
-            .filter((t) => t.type === 'recette')
+            .filter((t) => t.type === 'recette' && !t.estStorno)
             .reduce((sum, t) => sum + t.montant, 0);
 
         const depenses = transactions
-            .filter((t) => t.type === 'depense')
+            .filter((t) => t.type === 'depense' && !t.estStorno)
             .reduce((sum, t) => sum + t.montant, 0);
 
         // Détail des dépenses par catégorie (simplification)
         const achats = transactions
-            .filter((t) => t.type === 'depense' && t.categorie.toLowerCase().includes('achat'))
+            .filter((t) => t.type === 'depense' && !t.estStorno && t.categorie.toLowerCase().includes('achat'))
             .reduce((sum, t) => sum + t.montant, 0);
 
         const chargesPersonnel = transactions
-            .filter((t) => t.type === 'depense' && (
+            .filter((t) => t.type === 'depense' && !t.estStorno && (
                 t.categorie.toLowerCase().includes('salaire') ||
                 t.categorie.toLowerCase().includes('personnel')
             ))

@@ -14,17 +14,17 @@ export function Tresorerie() {
     const { exerciceCourant } = useApp();
     const [activeTab, setActiveTab] = useState<'caisse' | 'banque'>('caisse');
 
-    // Transactions de caisse
+    // Transactions de caisse (exclure les STORNO)
     const transactionsCaisse = useMemo(() => {
         return transactions
-            .filter((t) => t.moyenPaiement === 'especes')
+            .filter((t) => t.moyenPaiement === 'especes' && !t.estStorno)
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [transactions]);
 
-    // Transactions de banque
+    // Transactions de banque (exclure les STORNO)
     const transactionsBanque = useMemo(() => {
         return transactions
-            .filter((t) => t.moyenPaiement === 'banque')
+            .filter((t) => t.moyenPaiement === 'banque' && !t.estStorno)
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [transactions]);
 

@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import type { Transaction, EntrepriseInfo, Exercice, AppSettings } from '../types';
+import { getCurrentDateISO } from '../utils/date';
 
 // Collection names
 const COLLECTIONS = {
@@ -42,19 +43,26 @@ function convertTimestamps(data: DocumentData): any {
     return converted;
 }
 
-// Helper pour convertir les dates en Timestamp Firestore
+// Helper pour convertir les dates en Timestamp Firestore et supprimer les valeurs undefined
 function prepareDataForFirestore(data: any): any {
     if (!data || typeof data !== 'object') return data;
     
-    const prepared = { ...data };
-    for (const key in prepared) {
-        if (typeof prepared[key] === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(prepared[key])) {
+    const prepared: any = {};
+    for (const key in data) {
+        // Ignorer les champs undefined (Firestore ne les accepte pas)
+        if (data[key] === undefined) {
+            continue;
+        }
+        
+        if (typeof data[key] === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(data[key])) {
             // C'est une date ISO string, la convertir en Timestamp
-            prepared[key] = Timestamp.fromDate(new Date(prepared[key]));
-        } else if (Array.isArray(prepared[key])) {
-            prepared[key] = prepared[key].map(prepareDataForFirestore);
-        } else if (typeof prepared[key] === 'object' && prepared[key] !== null) {
-            prepared[key] = prepareDataForFirestore(prepared[key]);
+            prepared[key] = Timestamp.fromDate(new Date(data[key]));
+        } else if (Array.isArray(data[key])) {
+            prepared[key] = data[key].map(prepareDataForFirestore);
+        } else if (typeof data[key] === 'object' && data[key] !== null) {
+            prepared[key] = prepareDataForFirestore(data[key]);
+        } else {
+            prepared[key] = data[key];
         }
     }
     return prepared;
@@ -217,6 +225,66 @@ class FirestoreService {
             await deleteDoc(docRef);
         } catch (error) {
             console.error('Error deleting transaction:', error);
+            throw error;
+        }
+    }
+
+    async stornoTransaction(transactionId: string): Promise<Transaction> {
+        try {
+            // Récupérer la transaction originale
+            const docRef = doc(db, COLLECTIONS.TRANSACTIONS, transactionId);
+            const docSnap = await getDoc(docRef);
+            
+            if (!docSnap.exists()) {
+                throw new Error('Transaction introuvable');
+            }
+
+            const transactionOrigine = convertTimestamps(docSnap.data()) as Transaction;
+            
+            // Vérifier si la transaction n'est pas déjà un STORNO
+            if (transactionOrigine.estStorno) {
+                throw new Error('Impossible de créer un STORNO sur une transaction STORNO');
+            }
+
+            // Vérifier si la transaction n'a pas déjà été annulée
+            const transactions = await this.getTransactions(transactionOrigine.exerciceId);
+            const dejaAnnulee = transactions.some(
+                t => t.transactionIdOrigine === transactionId && t.estStorno
+            );
+            if (dejaAnnulee) {
+                throw new Error('Cette transaction a déjà été annulée');
+            }
+
+            // Créer la transaction STORNO (inverse)
+            const typeInverse: 'recette' | 'depense' = transactionOrigine.type === 'recette' ? 'depense' : 'recette';
+            const stornoId = `storno-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            // Construire la transaction STORNO en excluant les champs undefined
+            const transactionStorno: Transaction = {
+                id: stornoId,
+                date: getCurrentDateISO(),
+                type: typeInverse,
+                description: `STORNO - ${transactionOrigine.description}`,
+                montant: transactionOrigine.montant,
+                categorie: transactionOrigine.categorie,
+                moyenPaiement: transactionOrigine.moyenPaiement,
+                exerciceId: transactionOrigine.exerciceId,
+                estStorno: true,
+                transactionIdOrigine: transactionId,
+            };
+
+            // Ajouter les champs optionnels seulement s'ils existent
+            if (transactionOrigine.fournisseurBeneficiaire) {
+                transactionStorno.fournisseurBeneficiaire = transactionOrigine.fournisseurBeneficiaire;
+            }
+            if (transactionOrigine.numeroPiece) {
+                transactionStorno.numeroPiece = `STORNO-${transactionOrigine.numeroPiece}`;
+            }
+
+            await this.addTransaction(transactionStorno);
+            return transactionStorno;
+        } catch (error) {
+            console.error('Error creating STORNO transaction:', error);
             throw error;
         }
     }

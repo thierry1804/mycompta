@@ -30,11 +30,11 @@ export function Dashboard() {
         });
 
         const recettes = monthTransactions
-            .filter((t) => t.type === 'recette')
+            .filter((t) => t.type === 'recette' && !t.estStorno)
             .reduce((sum, t) => sum + t.montant, 0);
 
         const depenses = monthTransactions
-            .filter((t) => t.type === 'depense')
+            .filter((t) => t.type === 'depense' && !t.estStorno)
             .reduce((sum, t) => sum + t.montant, 0);
 
         return { recettes, depenses, resultat: recettes - depenses };
@@ -56,11 +56,11 @@ export function Dashboard() {
             });
 
             const recettes = monthTransactions
-                .filter((t) => t.type === 'recette')
+                .filter((t) => t.type === 'recette' && !t.estStorno)
                 .reduce((sum, t) => sum + t.montant, 0);
 
             const depenses = monthTransactions
-                .filter((t) => t.type === 'depense')
+                .filter((t) => t.type === 'depense' && !t.estStorno)
                 .reduce((sum, t) => sum + t.montant, 0);
 
             return {
@@ -76,7 +76,7 @@ export function Dashboard() {
         const categoryMap = new Map<string, number>();
 
         transactions
-            .filter((t) => t.type === 'depense')
+            .filter((t) => t.type === 'depense' && !t.estStorno)
             .forEach((t) => {
                 const current = categoryMap.get(t.categorie) || 0;
                 categoryMap.set(t.categorie, current + t.montant);
@@ -91,7 +91,7 @@ export function Dashboard() {
     // Top 5 des dépenses
     const topDepenses = useMemo(() => {
         return transactions
-            .filter((t) => t.type === 'depense')
+            .filter((t) => t.type === 'depense' && !t.estStorno)
             .sort((a, b) => b.montant - a.montant)
             .slice(0, 5);
     }, [transactions]);

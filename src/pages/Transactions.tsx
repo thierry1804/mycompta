@@ -1,7 +1,7 @@
 // Page Transactions
 import { useState } from 'react';
 import { Plus, Download } from 'lucide-react';
-import { Button } from '../components/ui';
+import { Button, AlertDialog } from '../components/ui';
 import { TransactionForm } from '../components/transactions/TransactionForm';
 import { TransactionList } from '../components/transactions/TransactionList';
 import { useTransactions } from '../hooks/useTransactions';
@@ -15,13 +15,19 @@ export function Transactions() {
         isLoading,
         addTransaction,
         updateTransaction,
-        deleteTransaction,
+        stornoTransaction,
     } = useTransactions();
     const { exerciceCourant } = useApp();
 
     const [showForm, setShowForm] = useState(false);
     const [formType, setFormType] = useState<'recette' | 'depense'>('recette');
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+    const [alertDialog, setAlertDialog] = useState<{ isOpen: boolean; title: string; message: string; type: 'info' | 'success' | 'warning' | 'error' }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+    });
 
     const handleAddClick = (type: 'recette' | 'depense') => {
         setFormType(type);
@@ -50,17 +56,44 @@ export function Transactions() {
         setEditingTransaction(null);
     };
 
-    const handleDelete = async (id: string) => {
-        await deleteTransaction(id);
+    const handleStorno = async (id: string) => {
+        try {
+            await stornoTransaction(id);
+            setAlertDialog({
+                isOpen: true,
+                title: 'Transaction annulée',
+                message: 'La transaction a été annulée avec succès. Une écriture inverse (STORNO) a été créée.',
+                type: 'success',
+            });
+        } catch (error: any) {
+            console.error('Error creating STORNO:', error);
+            setAlertDialog({
+                isOpen: true,
+                title: 'Erreur',
+                message: error?.message || 'Une erreur est survenue lors de l\'annulation de la transaction.',
+                type: 'error',
+            });
+        }
     };
 
     const handleExport = () => {
         if (transactions.length === 0) {
-            alert('Aucune transaction à exporter');
+            setAlertDialog({
+                isOpen: true,
+                title: 'Export impossible',
+                message: 'Aucune transaction à exporter.',
+                type: 'info',
+            });
             return;
         }
         const exercice = exerciceCourant?.annee || 'export';
         exportTransactionsToCSV(transactions, `transactions_${exercice}.csv`);
+        setAlertDialog({
+            isOpen: true,
+            title: 'Export réussi',
+            message: `Les transactions ont été exportées avec succès (${transactions.length} transaction${transactions.length > 1 ? 's' : ''}).`,
+            type: 'success',
+        });
     };
 
     if (isLoading) {
@@ -144,7 +177,7 @@ export function Transactions() {
                 <TransactionList
                     transactions={transactions}
                     onEdit={handleEdit}
-                    onDelete={handleDelete}
+                    onStorno={handleStorno}
                 />
             )}
 
@@ -156,6 +189,15 @@ export function Transactions() {
                     initialData={editingTransaction || undefined}
                 />
             )}
+
+            {/* Dialog d'alerte */}
+            <AlertDialog
+                isOpen={alertDialog.isOpen}
+                onClose={() => setAlertDialog({ isOpen: false, title: '', message: '', type: 'info' })}
+                title={alertDialog.title}
+                message={alertDialog.message}
+                type={alertDialog.type}
+            />
         </div>
     );
 }

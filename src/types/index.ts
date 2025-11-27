@@ -11,6 +11,8 @@ export interface Transaction {
     fournisseurBeneficiaire?: string;
     numeroPiece?: string;
     exerciceId: string;
+    estStorno?: boolean; // Indique si cette transaction est un STORNO
+    transactionIdOrigine?: string; // ID de la transaction originale si c'est un STORNO
 }
 
 export interface EntrepriseInfo {

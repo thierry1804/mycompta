@@ -35,12 +35,12 @@ export function exportTransactionsToPDF(transactions: Transaction[], entreprise:
         styles: { fontSize: 9 },
     });
 
-    // Totaux
+    // Totaux (exclure les STORNO)
     const totalRecettes = transactions
-        .filter((t) => t.type === 'recette')
+        .filter((t) => t.type === 'recette' && !t.estStorno)
         .reduce((sum, t) => sum + t.montant, 0);
     const totalDepenses = transactions
-        .filter((t) => t.type === 'depense')
+        .filter((t) => t.type === 'depense' && !t.estStorno)
         .reduce((sum, t) => sum + t.montant, 0);
 
     const finalY = (doc as any).lastAutoTable.finalY + 10;

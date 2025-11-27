@@ -1,7 +1,7 @@
 // Liste des transactions avec tableau
-import { useState } from 'react';
-import { Pencil, Trash2, Search } from 'lucide-react';
-import { Button, Input } from '../ui';
+import { useState, useMemo } from 'react';
+import { Pencil, XCircle, Search } from 'lucide-react';
+import { Button, Input, ConfirmDialog, AlertDialog } from '../ui';
 import type { Transaction } from '../../types';
 import { formatMontant } from '../../utils/currency';
 import { formatDate } from '../../utils/date';
@@ -9,12 +9,34 @@ import { formatDate } from '../../utils/date';
 interface TransactionListProps {
     transactions: Transaction[];
     onEdit: (transaction: Transaction) => void;
-    onDelete: (id: string) => void;
+    onStorno: (id: string) => Promise<void>;
 }
 
-export function TransactionList({ transactions, onEdit, onDelete }: TransactionListProps) {
+export function TransactionList({ transactions, onEdit, onStorno }: TransactionListProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState<'all' | 'recette' | 'depense'>('all');
+    const [stornoDialog, setStornoDialog] = useState<{ isOpen: boolean; transaction: Transaction | null; isLoading: boolean }>({
+        isOpen: false,
+        transaction: null,
+        isLoading: false,
+    });
+    const [alertDialog, setAlertDialog] = useState<{ isOpen: boolean; title: string; message: string; type: 'info' | 'success' | 'warning' | 'error' }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+    });
+
+    // Créer un map pour vérifier rapidement si une transaction a été annulée
+    const transactionsAnnulees = useMemo(() => {
+        const annulees = new Set<string>();
+        transactions.forEach(t => {
+            if (t.estStorno && t.transactionIdOrigine) {
+                annulees.add(t.transactionIdOrigine);
+            }
+        });
+        return annulees;
+    }, [transactions]);
 
     const filteredTransactions = transactions.filter((t) => {
         const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -26,9 +48,49 @@ export function TransactionList({ transactions, onEdit, onDelete }: TransactionL
         return matchesSearch && matchesType;
     });
 
-    const handleDelete = (id: string, description: string) => {
-        if (window.confirm(`Êtes-vous sûr de vouloir supprimer cette transaction ?\n"${description}"`)) {
-            onDelete(id);
+    const handleStornoClick = (transaction: Transaction) => {
+        // Vérifier si la transaction peut être annulée
+        if (transaction.estStorno) {
+            setAlertDialog({
+                isOpen: true,
+                title: 'Action impossible',
+                message: 'Impossible d\'annuler une transaction STORNO.',
+                type: 'warning',
+            });
+            return;
+        }
+
+        if (transactionsAnnulees.has(transaction.id)) {
+            setAlertDialog({
+                isOpen: true,
+                title: 'Transaction déjà annulée',
+                message: 'Cette transaction a déjà été annulée par un STORNO.',
+                type: 'info',
+            });
+            return;
+        }
+
+        setStornoDialog({
+            isOpen: true,
+            transaction,
+            isLoading: false,
+        });
+    };
+
+    const handleStornoConfirm = async () => {
+        if (stornoDialog.transaction) {
+            setStornoDialog(prev => ({ ...prev, isLoading: true }));
+            try {
+                await onStorno(stornoDialog.transaction.id);
+                // Le dialog sera fermé après le succès dans la page parent
+                // On attend un peu pour que l'utilisateur voie le feedback
+                setTimeout(() => {
+                    setStornoDialog({ isOpen: false, transaction: null, isLoading: false });
+                }, 500);
+            } catch (error) {
+                setStornoDialog(prev => ({ ...prev, isLoading: false }));
+                // L'erreur sera gérée par la page parent
+            }
         }
     };
 
@@ -108,61 +170,89 @@ export function TransactionList({ transactions, onEdit, onDelete }: TransactionL
                                     </td>
                                 </tr>
                             ) : (
-                                filteredTransactions.map((transaction) => (
-                                    <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                            {formatDate(transaction.date)}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm">
-                                            <div className="font-medium">{transaction.description}</div>
-                                            {transaction.fournisseurBeneficiaire && (
-                                                <div className="text-xs text-gray-500">
-                                                    {transaction.fournisseurBeneficiaire}
+                                filteredTransactions.map((transaction) => {
+                                    const estAnnulee = transactionsAnnulees.has(transaction.id);
+                                    const estStorno = transaction.estStorno;
+                                    const peutEtreAnnulee = !estStorno && !estAnnulee;
+
+                                    return (
+                                        <tr 
+                                            key={transaction.id} 
+                                            className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                                estStorno ? 'opacity-60 bg-gray-50 dark:bg-gray-800' : ''
+                                            } ${estAnnulee ? 'line-through opacity-50' : ''}`}
+                                        >
+                                            <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                                {formatDate(transaction.date)}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm">
+                                                <div className={`font-medium ${estStorno ? 'text-orange-600 dark:text-orange-400' : ''}`}>
+                                                    {transaction.description}
+                                                    {estStorno && (
+                                                        <span className="ml-2 text-xs text-orange-600 dark:text-orange-400 font-semibold">
+                                                            (STORNO)
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                                            {transaction.categorie}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm">
-                                            <span
-                                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${transaction.type === 'recette'
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                    }`}
-                                            >
-                                                {transaction.type === 'recette' ? 'Recette' : 'Dépense'}
-                                            </span>
-                                        </td>
-                                        <td className={`px-4 py-3 text-sm font-medium text-right ${transaction.type === 'recette' ? 'text-green-600' : 'text-red-600'
-                                            }`}>
-                                            {transaction.type === 'recette' ? '+' : '-'} {formatMontant(transaction.montant)}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-center">
-                                            <span className="inline-flex px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700">
-                                                {transaction.moyenPaiement === 'especes' ? 'Espèces' : 'Banque'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
-                                            <div className="flex justify-end gap-2">
-                                                <button
-                                                    onClick={() => onEdit(transaction)}
-                                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                    title="Modifier"
+                                                {transaction.fournisseurBeneficiaire && (
+                                                    <div className="text-xs text-gray-500">
+                                                        {transaction.fournisseurBeneficiaire}
+                                                    </div>
+                                                )}
+                                                {estAnnulee && !estStorno && (
+                                                    <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                                        ⚠ Annulée par STORNO
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                                {transaction.categorie}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm">
+                                                <span
+                                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${transaction.type === 'recette'
+                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                        }`}
                                                 >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(transaction.id, transaction.description)}
-                                                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                                    title="Supprimer"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                                                    {transaction.type === 'recette' ? 'Recette' : 'Dépense'}
+                                                </span>
+                                            </td>
+                                            <td className={`px-4 py-3 text-sm font-medium text-right ${transaction.type === 'recette' ? 'text-green-600' : 'text-red-600'
+                                                }`}>
+                                                {transaction.type === 'recette' ? '+' : '-'} {formatMontant(transaction.montant)}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-center">
+                                                <span className="inline-flex px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700">
+                                                    {transaction.moyenPaiement === 'especes' ? 'Espèces' : 'Banque'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                                                <div className="flex justify-end gap-2">
+                                                    {!estStorno && (
+                                                        <button
+                                                            onClick={() => onEdit(transaction)}
+                                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                            title="Modifier"
+                                                            disabled={estAnnulee}
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    {peutEtreAnnulee && (
+                                                        <button
+                                                            onClick={() => handleStornoClick(transaction)}
+                                                            className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300"
+                                                            title="Annuler (STORNO)"
+                                                        >
+                                                            <XCircle className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
@@ -175,19 +265,76 @@ export function TransactionList({ transactions, onEdit, onDelete }: TransactionL
                     <div className="text-green-600">
                         Total Recettes: {formatMontant(
                             filteredTransactions
-                                .filter((t) => t.type === 'recette')
+                                .filter((t) => t.type === 'recette' && !t.estStorno)
                                 .reduce((sum, t) => sum + t.montant, 0)
                         )}
                     </div>
                     <div className="text-red-600">
                         Total Dépenses: {formatMontant(
                             filteredTransactions
-                                .filter((t) => t.type === 'depense')
+                                .filter((t) => t.type === 'depense' && !t.estStorno)
                                 .reduce((sum, t) => sum + t.montant, 0)
                         )}
                     </div>
                 </div>
             )}
+
+            {/* Dialog de confirmation STORNO */}
+            {stornoDialog.transaction && (
+                <ConfirmDialog
+                    isOpen={stornoDialog.isOpen}
+                    onClose={() => !stornoDialog.isLoading && setStornoDialog({ isOpen: false, transaction: null, isLoading: false })}
+                    onConfirm={handleStornoConfirm}
+                    title="Annuler la transaction (STORNO)"
+                    message="Êtes-vous sûr de vouloir annuler cette transaction ?"
+                    variant="warning"
+                    confirmText="Confirmer l'annulation"
+                    cancelText="Annuler"
+                    isLoading={stornoDialog.isLoading}
+                    details={
+                        <div className="space-y-2">
+                            <div>
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Description :</span>
+                                <p className="text-base font-semibold text-gray-900 dark:text-gray-100 mt-1">
+                                    "{stornoDialog.transaction.description}"
+                                </p>
+                            </div>
+                            <div>
+                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Montant :</span>
+                                <p className={`text-lg font-bold mt-1 ${
+                                    stornoDialog.transaction.type === 'recette' 
+                                        ? 'text-green-600 dark:text-green-400' 
+                                        : 'text-red-600 dark:text-red-400'
+                                }`}>
+                                    {stornoDialog.transaction.type === 'recette' ? '+' : '-'} {formatMontant(stornoDialog.transaction.montant)}
+                                </p>
+                            </div>
+                            {stornoDialog.transaction.categorie && (
+                                <div>
+                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Catégorie :</span>
+                                    <p className="text-base text-gray-900 dark:text-gray-100 mt-1">
+                                        {stornoDialog.transaction.categorie}
+                                    </p>
+                                </div>
+                            )}
+                            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                                    ℹ️ Une écriture inverse sera créée pour annuler cette transaction conformément aux principes comptables.
+                                </p>
+                            </div>
+                        </div>
+                    }
+                />
+            )}
+
+            {/* Dialog d'alerte */}
+            <AlertDialog
+                isOpen={alertDialog.isOpen}
+                onClose={() => setAlertDialog({ isOpen: false, title: '', message: '', type: 'info' })}
+                title={alertDialog.title}
+                message={alertDialog.message}
+                type={alertDialog.type}
+            />
         </div>
     );
 }

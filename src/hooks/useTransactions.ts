@@ -46,9 +46,14 @@ export function useTransactions() {
         // La mise à jour se fera automatiquement via la souscription
     };
 
-    // Calculs
-    const getRecettes = () => transactions.filter((t) => t.type === 'recette');
-    const getDepenses = () => transactions.filter((t) => t.type === 'depense');
+    const stornoTransaction = async (id: string) => {
+        await firestoreService.stornoTransaction(id);
+        // La mise à jour se fera automatiquement via la souscription
+    };
+
+    // Calculs - Exclure les transactions STORNO des calculs car elles annulent les transactions originales
+    const getRecettes = () => transactions.filter((t) => t.type === 'recette' && !t.estStorno);
+    const getDepenses = () => transactions.filter((t) => t.type === 'depense' && !t.estStorno);
 
     const getTotalRecettes = () =>
         getRecettes().reduce((sum, t) => sum + t.montant, 0);
@@ -58,10 +63,10 @@ export function useTransactions() {
 
     const getSoldeCaisse = () => {
         const recettesCaisse = transactions
-            .filter((t) => t.type === 'recette' && t.moyenPaiement === 'especes')
+            .filter((t) => t.type === 'recette' && t.moyenPaiement === 'especes' && !t.estStorno)
             .reduce((sum, t) => sum + t.montant, 0);
         const depensesCaisse = transactions
-            .filter((t) => t.type === 'depense' && t.moyenPaiement === 'especes')
+            .filter((t) => t.type === 'depense' && t.moyenPaiement === 'especes' && !t.estStorno)
             .reduce((sum, t) => sum + t.montant, 0);
         return recettesCaisse - depensesCaisse;
     };
@@ -69,10 +74,10 @@ export function useTransactions() {
     const getSoldeBanque = () => {
         const soldeInitial = exerciceCourant?.soldeOuvertureBanque || 0;
         const recettesBanque = transactions
-            .filter((t) => t.type === 'recette' && t.moyenPaiement === 'banque')
+            .filter((t) => t.type === 'recette' && t.moyenPaiement === 'banque' && !t.estStorno)
             .reduce((sum, t) => sum + t.montant, 0);
         const depensesBanque = transactions
-            .filter((t) => t.type === 'depense' && t.moyenPaiement === 'banque')
+            .filter((t) => t.type === 'depense' && t.moyenPaiement === 'banque' && !t.estStorno)
             .reduce((sum, t) => sum + t.montant, 0);
         return soldeInitial + recettesBanque - depensesBanque;
     };
@@ -83,6 +88,7 @@ export function useTransactions() {
         addTransaction,
         updateTransaction,
         deleteTransaction,
+        stornoTransaction,
         getRecettes,
         getDepenses,
         getTotalRecettes,

@@ -50,8 +50,19 @@ function AppRoutes() {
 }
 
 function App() {
+  // Détecter automatiquement le chemin de base depuis l'URL
+  const getBasePath = () => {
+    // Obtenir le chemin actuel
+    const path = window.location.pathname;
+    // Si on est à la racine exacte, retourner '/'
+    if (path === '/') return '/';
+    // Sinon, extraire le premier segment du chemin (le nom du dossier)
+    const match = path.match(/^(\/[^\/]+)/);
+    return match ? match[1] : '/';
+  };
+
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={getBasePath()}>
       <ThemeProvider>
         <AppProvider>
           <AppRoutes />
