@@ -5,6 +5,8 @@ import { Button, Input, ConfirmDialog, AlertDialog } from '../ui';
 import type { Transaction } from '../../types';
 import { formatMontant } from '../../utils/currency';
 import { formatDate } from '../../utils/date';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface TransactionListProps {
     transactions: Transaction[];
@@ -222,7 +224,23 @@ export function TransactionList({ transactions, onEdit, onStorno }: TransactionL
                                             } ${estAnnulee ? 'line-through opacity-50' : ''}`}
                                         >
                                             <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                                {formatDate(transaction.date)}
+                                                {(() => {
+                                                    const timestamp = getCreationTimestamp(transaction.id);
+                                                    const dateTransaction = new Date(transaction.date);
+                                                    
+                                                    // Si on a un timestamp valide, combiner la date de la transaction avec l'heure du timestamp
+                                                    if (timestamp > 0) {
+                                                        const dateCreation = new Date(timestamp);
+                                                        // Utiliser la date de la transaction mais l'heure de création
+                                                        dateTransaction.setHours(
+                                                            dateCreation.getHours(),
+                                                            dateCreation.getMinutes()
+                                                        );
+                                                        return format(dateTransaction, 'dd/MM/yyyy HH:mm', { locale: fr });
+                                                    }
+                                                    // Fallback : afficher seulement la date si pas de timestamp
+                                                    return formatDate(transaction.date);
+                                                })()}
                                             </td>
                                             <td className="px-4 py-3 text-sm">
                                                 <div className={`font-medium ${estStorno ? 'text-orange-600 dark:text-orange-400' : ''}`}>
