@@ -1,10 +1,52 @@
-// Service de stockage avec abstraction window.storage / localStorage
+// Service de stockage avec abstraction window.storage / localStorage / Capacitor Preferences
+
+import { Preferences } from '@capacitor/preferences';
 
 export interface StorageAdapter {
     get(key: string): Promise<string | null>;
     set(key: string, value: string): Promise<void>;
     remove(key: string): Promise<void>;
     clear(): Promise<void>;
+}
+
+// Adaptateur pour Capacitor Preferences (priorité pour mobile)
+class CapacitorStorageAdapter implements StorageAdapter {
+    async get(key: string): Promise<string | null> {
+        try {
+            const { value } = await Preferences.get({ key });
+            return value;
+        } catch (error) {
+            console.error('CapacitorStorage get error:', error);
+            return null;
+        }
+    }
+
+    async set(key: string, value: string): Promise<void> {
+        try {
+            await Preferences.set({ key, value });
+        } catch (error) {
+            console.error('CapacitorStorage set error:', error);
+            throw error;
+        }
+    }
+
+    async remove(key: string): Promise<void> {
+        try {
+            await Preferences.remove({ key });
+        } catch (error) {
+            console.error('CapacitorStorage remove error:', error);
+            throw error;
+        }
+    }
+
+    async clear(): Promise<void> {
+        try {
+            await Preferences.clear();
+        } catch (error) {
+            console.error('CapacitorStorage clear error:', error);
+            throw error;
+        }
+    }
 }
 
 // Adaptateur pour window.storage (si disponible)
@@ -91,8 +133,11 @@ class StorageService {
     private adapter: StorageAdapter;
 
     constructor() {
-        // Vérifier si window.storage est disponible
-        if (typeof window !== 'undefined' && (window as any).storage) {
+        // Vérifier Capacitor en premier (pour mobile)
+        if (typeof window !== 'undefined' && (window as any).Capacitor) {
+            console.log('Using Capacitor Preferences adapter');
+            this.adapter = new CapacitorStorageAdapter();
+        } else if (typeof window !== 'undefined' && (window as any).storage) {
             console.log('Using window.storage adapter');
             this.adapter = new WindowStorageAdapter();
         } else {

@@ -76,7 +76,7 @@ export function Transactions() {
         }
     };
 
-    const handleExport = () => {
+    const handleExport = async () => {
         if (transactions.length === 0) {
             setAlertDialog({
                 isOpen: true,
@@ -87,7 +87,7 @@ export function Transactions() {
             return;
         }
         const exercice = exerciceCourant?.annee || 'export';
-        exportTransactionsToCSV(transactions, `transactions_${exercice}.csv`);
+        await exportTransactionsToCSV(transactions, `transactions_${exercice}.csv`);
         setAlertDialog({
             isOpen: true,
             title: 'Export réussi',

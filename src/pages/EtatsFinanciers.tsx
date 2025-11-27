@@ -16,14 +16,14 @@ export function EtatsFinanciers() {
     const { transactions } = useTransactions();
     const [activeTab, setActiveTab] = useState<'bilan' | 'compte-resultat'>('bilan');
 
-    const handleExportBilan = () => {
+    const handleExportBilan = async () => {
         const exercice = exerciceCourant?.annee || 'export';
-        exportBilanToCSV(bilan, `bilan_${exercice}.csv`);
+        await exportBilanToCSV(bilan, `bilan_${exercice}.csv`);
     };
 
-    const handleExportCompteResultat = () => {
+    const handleExportCompteResultat = async () => {
         const exercice = exerciceCourant?.annee || 'export';
-        exportCompteResultatToCSV(compteResultat, `compte_resultat_${exercice}.csv`);
+        await exportCompteResultatToCSV(compteResultat, `compte_resultat_${exercice}.csv`);
     };
 
     if (transactions.length === 0) {

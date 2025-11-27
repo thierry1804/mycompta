@@ -1,8 +1,11 @@
 // Utilitaire pour exporter les transactions en CSV
 import type { Transaction } from '../types';
 import { formatDate } from './date';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
 
-export function exportTransactionsToCSV(transactions: Transaction[], filename: string = 'transactions.csv') {
+export async function exportTransactionsToCSV(transactions: Transaction[], filename: string = 'transactions.csv') {
     // En-têtes du CSV
     const headers = [
         'Date',
@@ -33,22 +36,60 @@ export function exportTransactionsToCSV(transactions: Transaction[], filename: s
         ...rows.map((row) => row.join(',')),
     ].join('\n');
 
-    // Créer un blob et télécharger
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
+    // Détecter si on est sur mobile (Capacitor)
+    const isNative = Capacitor.isNativePlatform();
 
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
+    if (isNative) {
+        // Sur mobile : utiliser Capacitor Share
+        try {
+            // Écrire le fichier temporairement
+            const base64Content = btoa('\uFEFF' + csvContent);
+            await Filesystem.writeFile({
+                path: filename,
+                data: base64Content,
+                directory: Directory.Cache,
+                encoding: Encoding.UTF8,
+            });
 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+            // Obtenir l'URI du fichier
+            const fileUri = await Filesystem.getUri({
+                path: filename,
+                directory: Directory.Cache,
+            });
+
+            // Partager le fichier
+            await Share.share({
+                title: 'Exporter les transactions',
+                text: 'Fichier CSV des transactions',
+                url: fileUri.uri,
+                dialogTitle: 'Partager le fichier CSV',
+            });
+        } catch (error) {
+            console.error('Erreur lors de l\'export mobile:', error);
+            // Fallback : partager le contenu directement
+            await Share.share({
+                title: 'Transactions CSV',
+                text: csvContent,
+            });
+        }
+    } else {
+        // Sur web : utiliser le téléchargement blob classique
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 }
 
 // Exporter le bilan en CSV
-export function exportBilanToCSV(bilan: any, filename: string = 'bilan.csv') {
+export async function exportBilanToCSV(bilan: any, filename: string = 'bilan.csv') {
     const rows = [
         ['BILAN SIMPLIFIÉ'],
         [''],
@@ -66,21 +107,57 @@ export function exportBilanToCSV(bilan: any, filename: string = 'bilan.csv') {
     ];
 
     const csvContent = rows.map((row) => row.join(',')).join('\n');
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
+    
+    // Détecter si on est sur mobile (Capacitor)
+    const isNative = Capacitor.isNativePlatform();
 
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
+    if (isNative) {
+        // Sur mobile : utiliser Capacitor Share
+        try {
+            const base64Content = btoa('\uFEFF' + csvContent);
+            await Filesystem.writeFile({
+                path: filename,
+                data: base64Content,
+                directory: Directory.Cache,
+                encoding: Encoding.UTF8,
+            });
 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+            const fileUri = await Filesystem.getUri({
+                path: filename,
+                directory: Directory.Cache,
+            });
+
+            await Share.share({
+                title: 'Exporter le bilan',
+                text: 'Fichier CSV du bilan',
+                url: fileUri.uri,
+                dialogTitle: 'Partager le fichier CSV',
+            });
+        } catch (error) {
+            console.error('Erreur lors de l\'export mobile:', error);
+            await Share.share({
+                title: 'Bilan CSV',
+                text: csvContent,
+            });
+        }
+    } else {
+        // Sur web : utiliser le téléchargement blob classique
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 }
 
 // Exporter le compte de résultat en CSV
-export function exportCompteResultatToCSV(compteResultat: any, filename: string = 'compte_resultat.csv') {
+export async function exportCompteResultatToCSV(compteResultat: any, filename: string = 'compte_resultat.csv') {
     const rows = [
         ['COMPTE DE RÉSULTAT SIMPLIFIÉ'],
         [''],
@@ -100,15 +177,51 @@ export function exportCompteResultatToCSV(compteResultat: any, filename: string 
     ];
 
     const csvContent = rows.map((row) => row.join(',')).join('\n');
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
+    
+    // Détecter si on est sur mobile (Capacitor)
+    const isNative = Capacitor.isNativePlatform();
 
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
+    if (isNative) {
+        // Sur mobile : utiliser Capacitor Share
+        try {
+            const base64Content = btoa('\uFEFF' + csvContent);
+            await Filesystem.writeFile({
+                path: filename,
+                data: base64Content,
+                directory: Directory.Cache,
+                encoding: Encoding.UTF8,
+            });
 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+            const fileUri = await Filesystem.getUri({
+                path: filename,
+                directory: Directory.Cache,
+            });
+
+            await Share.share({
+                title: 'Exporter le compte de résultat',
+                text: 'Fichier CSV du compte de résultat',
+                url: fileUri.uri,
+                dialogTitle: 'Partager le fichier CSV',
+            });
+        } catch (error) {
+            console.error('Erreur lors de l\'export mobile:', error);
+            await Share.share({
+                title: 'Compte de résultat CSV',
+                text: csvContent,
+            });
+        }
+    } else {
+        // Sur web : utiliser le téléchargement blob classique
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 }
