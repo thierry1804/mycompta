@@ -8,6 +8,13 @@ import { formatDate } from './date';
 export function exportTransactionsToPDF(transactions: Transaction[], entreprise: string, exercice: string) {
     const doc = new jsPDF();
 
+    // Helper: vérifier si une transaction a été annulée par un STORNO
+    const estAnnuleeParStorno = (transactionId: string) => {
+        return transactions.some(
+            (t) => t.estStorno && t.transactionIdOrigine === transactionId
+        );
+    };
+
     // En-tête
     doc.setFontSize(18);
     doc.text(entreprise, 14, 20);
@@ -35,12 +42,12 @@ export function exportTransactionsToPDF(transactions: Transaction[], entreprise:
         styles: { fontSize: 9 },
     });
 
-    // Totaux (exclure les STORNO)
+    // Totaux (exclure les STORNO et les transactions annulées)
     const totalRecettes = transactions
-        .filter((t) => t.type === 'recette' && !t.estStorno)
+        .filter((t) => t.type === 'recette' && !t.estStorno && !estAnnuleeParStorno(t.id))
         .reduce((sum, t) => sum + t.montant, 0);
     const totalDepenses = transactions
-        .filter((t) => t.type === 'depense' && !t.estStorno)
+        .filter((t) => t.type === 'depense' && !t.estStorno && !estAnnuleeParStorno(t.id))
         .reduce((sum, t) => sum + t.montant, 0);
 
     const finalY = (doc as any).lastAutoTable.finalY + 10;

@@ -15,6 +15,7 @@ interface TransactionListProps {
 export function TransactionList({ transactions, onEdit, onStorno }: TransactionListProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState<'all' | 'recette' | 'depense'>('all');
+    const [showStorno, setShowStorno] = useState(false); // Par défaut, masquer les STORNO
     const [stornoDialog, setStornoDialog] = useState<{ isOpen: boolean; transaction: Transaction | null; isLoading: boolean }>({
         isOpen: false,
         transaction: null,
@@ -38,15 +39,44 @@ export function TransactionList({ transactions, onEdit, onStorno }: TransactionL
         return annulees;
     }, [transactions]);
 
-    const filteredTransactions = transactions.filter((t) => {
-        const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            t.categorie.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (t.fournisseurBeneficiaire?.toLowerCase().includes(searchTerm.toLowerCase()));
+    // Fonction pour extraire le timestamp de création depuis l'ID
+    const getCreationTimestamp = (transactionId: string): number => {
+        // Format: tx-{timestamp}-... ou storno-{timestamp}-...
+        const match = transactionId.match(/^(?:tx|storno)-(\d+)-/);
+        return match ? parseInt(match[1], 10) : 0;
+    };
 
-        const matchesType = filterType === 'all' || t.type === filterType;
+    const filteredTransactions = useMemo(() => {
+        const filtered = transactions.filter((t) => {
+            const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                t.categorie.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (t.fournisseurBeneficiaire?.toLowerCase().includes(searchTerm.toLowerCase()));
 
-        return matchesSearch && matchesType;
-    });
+            const matchesType = filterType === 'all' || t.type === filterType;
+
+            // Par défaut, exclure les STORNO et les transactions annulées par un STORNO
+            // sauf si l'option est activée
+            const estStorno = t.estStorno;
+            const estAnnulee = transactionsAnnulees.has(t.id);
+            const matchesStorno = showStorno || (!estStorno && !estAnnulee);
+
+            return matchesSearch && matchesType && matchesStorno;
+        });
+
+        // Trier par date décroissante, puis par heure de création décroissante
+        return filtered.sort((a, b) => {
+            // D'abord par date de transaction (décroissant)
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (dateB !== dateA) {
+                return dateB - dateA; // Décroissant
+            }
+            // Si même date, trier par timestamp de création (décroissant)
+            const timestampA = getCreationTimestamp(a.id);
+            const timestampB = getCreationTimestamp(b.id);
+            return timestampB - timestampA; // Décroissant
+        });
+    }, [transactions, searchTerm, filterType, showStorno, transactionsAnnulees]);
 
     const handleStornoClick = (transaction: Transaction) => {
         // Vérifier si la transaction peut être annulée
@@ -108,7 +138,7 @@ export function TransactionList({ transactions, onEdit, onStorno }: TransactionL
                         className="pl-10"
                     />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     <Button
                         variant={filterType === 'all' ? 'default' : 'outline'}
                         onClick={() => setFilterType('all')}
@@ -129,6 +159,15 @@ export function TransactionList({ transactions, onEdit, onStorno }: TransactionL
                         size="sm"
                     >
                         Dépenses
+                    </Button>
+                    <Button
+                        variant={showStorno ? 'default' : 'outline'}
+                        onClick={() => setShowStorno(!showStorno)}
+                        size="sm"
+                        className="ml-auto"
+                        title={showStorno ? 'Masquer les STORNO et transactions annulées' : 'Afficher les STORNO et transactions annulées'}
+                    >
+                        {showStorno ? 'Masquer annulées' : 'Afficher annulées'}
                     </Button>
                 </div>
             </div>
@@ -265,14 +304,14 @@ export function TransactionList({ transactions, onEdit, onStorno }: TransactionL
                     <div className="text-green-600">
                         Total Recettes: {formatMontant(
                             filteredTransactions
-                                .filter((t) => t.type === 'recette' && !t.estStorno)
+                                .filter((t) => t.type === 'recette' && !t.estStorno && !transactionsAnnulees.has(t.id))
                                 .reduce((sum, t) => sum + t.montant, 0)
                         )}
                     </div>
                     <div className="text-red-600">
                         Total Dépenses: {formatMontant(
                             filteredTransactions
-                                .filter((t) => t.type === 'depense' && !t.estStorno)
+                                .filter((t) => t.type === 'depense' && !t.estStorno && !transactionsAnnulees.has(t.id))
                                 .reduce((sum, t) => sum + t.montant, 0)
                         )}
                     </div>

@@ -10,23 +10,31 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 
 export function Tresorerie() {
-    const { transactions, getSoldeCaisse, getSoldeBanque } = useTransactions();
+    const { transactions, getSoldeCaisse, getSoldeBanque, isTransactionCancelled } = useTransactions();
     const { exerciceCourant } = useApp();
     const [activeTab, setActiveTab] = useState<'caisse' | 'banque'>('caisse');
 
-    // Transactions de caisse (exclure les STORNO)
+    // Transactions de caisse (exclure les STORNO et les transactions annulées)
     const transactionsCaisse = useMemo(() => {
         return transactions
-            .filter((t) => t.moyenPaiement === 'especes' && !t.estStorno)
+            .filter((t) => 
+                t.moyenPaiement === 'especes' && 
+                !t.estStorno && 
+                !isTransactionCancelled(t.id)
+            )
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }, [transactions]);
+    }, [transactions, isTransactionCancelled]);
 
-    // Transactions de banque (exclure les STORNO)
+    // Transactions de banque (exclure les STORNO et les transactions annulées)
     const transactionsBanque = useMemo(() => {
         return transactions
-            .filter((t) => t.moyenPaiement === 'banque' && !t.estStorno)
+            .filter((t) => 
+                t.moyenPaiement === 'banque' && 
+                !t.estStorno && 
+                !isTransactionCancelled(t.id)
+            )
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }, [transactions]);
+    }, [transactions, isTransactionCancelled]);
 
     // Calcul du solde cumulé pour la caisse
     const livreDecaisse = useMemo(() => {

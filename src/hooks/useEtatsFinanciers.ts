@@ -5,17 +5,17 @@ import { useApp } from '../contexts/AppContext';
 import type { BilanSimplified, CompteResultat } from '../types';
 
 export function useEtatsFinanciers() {
-    const { transactions } = useTransactions();
+    const { transactions, isTransactionCancelled } = useTransactions();
     const { exerciceCourant, entrepriseInfo } = useApp();
 
     // Calcul du Bilan Simplifié (Situation de Fin d'Exercice)
     const bilan = useMemo((): BilanSimplified => {
         const recettes = transactions
-            .filter((t) => t.type === 'recette' && !t.estStorno)
+            .filter((t) => t.type === 'recette' && !t.estStorno && !isTransactionCancelled(t.id))
             .reduce((sum, t) => sum + t.montant, 0);
 
         const depenses = transactions
-            .filter((t) => t.type === 'depense' && !t.estStorno)
+            .filter((t) => t.type === 'depense' && !t.estStorno && !isTransactionCancelled(t.id))
             .reduce((sum, t) => sum + t.montant, 0);
 
         const resultat = recettes - depenses;
@@ -46,25 +46,25 @@ export function useEtatsFinanciers() {
                 total: totalPassif,
             },
         };
-    }, [transactions, exerciceCourant, entrepriseInfo]);
+    }, [transactions, exerciceCourant, entrepriseInfo, isTransactionCancelled]);
 
     // Calcul du Compte de Résultat Simplifié
     const compteResultat = useMemo((): CompteResultat => {
         const recettes = transactions
-            .filter((t) => t.type === 'recette' && !t.estStorno)
+            .filter((t) => t.type === 'recette' && !t.estStorno && !isTransactionCancelled(t.id))
             .reduce((sum, t) => sum + t.montant, 0);
 
         const depenses = transactions
-            .filter((t) => t.type === 'depense' && !t.estStorno)
+            .filter((t) => t.type === 'depense' && !t.estStorno && !isTransactionCancelled(t.id))
             .reduce((sum, t) => sum + t.montant, 0);
 
         // Détail des dépenses par catégorie (simplification)
         const achats = transactions
-            .filter((t) => t.type === 'depense' && !t.estStorno && t.categorie.toLowerCase().includes('achat'))
+            .filter((t) => t.type === 'depense' && !t.estStorno && !isTransactionCancelled(t.id) && t.categorie.toLowerCase().includes('achat'))
             .reduce((sum, t) => sum + t.montant, 0);
 
         const chargesPersonnel = transactions
-            .filter((t) => t.type === 'depense' && !t.estStorno && (
+            .filter((t) => t.type === 'depense' && !t.estStorno && !isTransactionCancelled(t.id) && (
                 t.categorie.toLowerCase().includes('salaire') ||
                 t.categorie.toLowerCase().includes('personnel')
             ))
@@ -91,7 +91,7 @@ export function useEtatsFinanciers() {
             },
             resultat,
         };
-    }, [transactions, exerciceCourant]);
+    }, [transactions, exerciceCourant, isTransactionCancelled]);
 
     return {
         bilan,

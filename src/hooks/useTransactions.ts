@@ -51,9 +51,23 @@ export function useTransactions() {
         // La mise à jour se fera automatiquement via la souscription
     };
 
-    // Calculs - Exclure les transactions STORNO des calculs car elles annulent les transactions originales
-    const getRecettes = () => transactions.filter((t) => t.type === 'recette' && !t.estStorno);
-    const getDepenses = () => transactions.filter((t) => t.type === 'depense' && !t.estStorno);
+    // Helper: vérifier si une transaction a été annulée par un STORNO
+    const estAnnuleeParStorno = (transactionId: string) => {
+        return transactions.some(
+            (t) => t.estStorno && t.transactionIdOrigine === transactionId
+        );
+    };
+
+    // Fonction helper exportée pour utilisation dans d'autres composants
+    const isTransactionCancelled = (transactionId: string) => estAnnuleeParStorno(transactionId);
+
+    // Calculs - Exclure les transactions STORNO et les transactions annulées par un STORNO
+    const getRecettes = () => transactions.filter((t) => 
+        t.type === 'recette' && !t.estStorno && !estAnnuleeParStorno(t.id)
+    );
+    const getDepenses = () => transactions.filter((t) => 
+        t.type === 'depense' && !t.estStorno && !estAnnuleeParStorno(t.id)
+    );
 
     const getTotalRecettes = () =>
         getRecettes().reduce((sum, t) => sum + t.montant, 0);
@@ -63,10 +77,20 @@ export function useTransactions() {
 
     const getSoldeCaisse = () => {
         const recettesCaisse = transactions
-            .filter((t) => t.type === 'recette' && t.moyenPaiement === 'especes' && !t.estStorno)
+            .filter((t) => 
+                t.type === 'recette' && 
+                t.moyenPaiement === 'especes' && 
+                !t.estStorno && 
+                !estAnnuleeParStorno(t.id)
+            )
             .reduce((sum, t) => sum + t.montant, 0);
         const depensesCaisse = transactions
-            .filter((t) => t.type === 'depense' && t.moyenPaiement === 'especes' && !t.estStorno)
+            .filter((t) => 
+                t.type === 'depense' && 
+                t.moyenPaiement === 'especes' && 
+                !t.estStorno && 
+                !estAnnuleeParStorno(t.id)
+            )
             .reduce((sum, t) => sum + t.montant, 0);
         return recettesCaisse - depensesCaisse;
     };
@@ -74,10 +98,20 @@ export function useTransactions() {
     const getSoldeBanque = () => {
         const soldeInitial = exerciceCourant?.soldeOuvertureBanque || 0;
         const recettesBanque = transactions
-            .filter((t) => t.type === 'recette' && t.moyenPaiement === 'banque' && !t.estStorno)
+            .filter((t) => 
+                t.type === 'recette' && 
+                t.moyenPaiement === 'banque' && 
+                !t.estStorno && 
+                !estAnnuleeParStorno(t.id)
+            )
             .reduce((sum, t) => sum + t.montant, 0);
         const depensesBanque = transactions
-            .filter((t) => t.type === 'depense' && t.moyenPaiement === 'banque' && !t.estStorno)
+            .filter((t) => 
+                t.type === 'depense' && 
+                t.moyenPaiement === 'banque' && 
+                !t.estStorno && 
+                !estAnnuleeParStorno(t.id)
+            )
             .reduce((sum, t) => sum + t.montant, 0);
         return soldeInitial + recettesBanque - depensesBanque;
     };
@@ -95,6 +129,7 @@ export function useTransactions() {
         getTotalDepenses,
         getSoldeCaisse,
         getSoldeBanque,
+        isTransactionCancelled,
         reload: () => {
             // La souscription en temps réel gère automatiquement les mises à jour
             // Cette fonction est conservée pour la compatibilité

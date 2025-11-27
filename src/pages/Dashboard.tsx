@@ -16,6 +16,7 @@ export function Dashboard() {
         isLoading,
         getSoldeCaisse,
         getSoldeBanque,
+        isTransactionCancelled,
     } = useTransactions();
 
     // Calculs pour le mois en cours
@@ -30,15 +31,15 @@ export function Dashboard() {
         });
 
         const recettes = monthTransactions
-            .filter((t) => t.type === 'recette' && !t.estStorno)
+            .filter((t) => t.type === 'recette' && !t.estStorno && !isTransactionCancelled(t.id))
             .reduce((sum, t) => sum + t.montant, 0);
 
         const depenses = monthTransactions
-            .filter((t) => t.type === 'depense' && !t.estStorno)
+            .filter((t) => t.type === 'depense' && !t.estStorno && !isTransactionCancelled(t.id))
             .reduce((sum, t) => sum + t.montant, 0);
 
         return { recettes, depenses, resultat: recettes - depenses };
-    }, [transactions]);
+    }, [transactions, isTransactionCancelled]);
 
     // Données pour le graphique mensuel (6 derniers mois)
     const monthlyData = useMemo(() => {
@@ -56,11 +57,11 @@ export function Dashboard() {
             });
 
             const recettes = monthTransactions
-                .filter((t) => t.type === 'recette' && !t.estStorno)
+                .filter((t) => t.type === 'recette' && !t.estStorno && !isTransactionCancelled(t.id))
                 .reduce((sum, t) => sum + t.montant, 0);
 
             const depenses = monthTransactions
-                .filter((t) => t.type === 'depense' && !t.estStorno)
+                .filter((t) => t.type === 'depense' && !t.estStorno && !isTransactionCancelled(t.id))
                 .reduce((sum, t) => sum + t.montant, 0);
 
             return {
@@ -69,14 +70,14 @@ export function Dashboard() {
                 depenses,
             };
         });
-    }, [transactions]);
+    }, [transactions, isTransactionCancelled]);
 
     // Données pour le graphique des dépenses par catégorie
     const depensesByCategory = useMemo(() => {
         const categoryMap = new Map<string, number>();
 
         transactions
-            .filter((t) => t.type === 'depense' && !t.estStorno)
+            .filter((t) => t.type === 'depense' && !t.estStorno && !isTransactionCancelled(t.id))
             .forEach((t) => {
                 const current = categoryMap.get(t.categorie) || 0;
                 categoryMap.set(t.categorie, current + t.montant);
@@ -86,15 +87,15 @@ export function Dashboard() {
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value)
             .slice(0, 8); // Top 8 catégories
-    }, [transactions]);
+    }, [transactions, isTransactionCancelled]);
 
     // Top 5 des dépenses
     const topDepenses = useMemo(() => {
         return transactions
-            .filter((t) => t.type === 'depense' && !t.estStorno)
+            .filter((t) => t.type === 'depense' && !t.estStorno && !isTransactionCancelled(t.id))
             .sort((a, b) => b.montant - a.montant)
             .slice(0, 5);
-    }, [transactions]);
+    }, [transactions, isTransactionCancelled]);
 
     if (isLoading) {
         return (
